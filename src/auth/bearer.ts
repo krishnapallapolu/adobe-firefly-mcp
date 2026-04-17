@@ -15,7 +15,7 @@ export const requireBearer: RequestHandler = (req, res, next) => {
     return;
   }
   const presented = Buffer.from(match[1] ?? "");
-  const expected = Buffer.from(env.MCP_BEARER_TOKEN);
+  const expected = Buffer.from(env.MCP_BEARER_TOKEN!);
   if (
     presented.length !== expected.length ||
     !timingSafeEqual(presented, expected)

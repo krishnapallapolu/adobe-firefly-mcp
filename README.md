@@ -45,22 +45,47 @@ If you are an individual developer, freelancer, or small team without an enterpr
 
 ## Quick start (local)
 
-Requires Node.js ≥ 20.
+Requires Node.js ≥ 20.6 (uses `--env-file` for `.env` loading — no dotenv needed).
+
+### Option A: Mock mode (no Adobe credentials needed)
+
+Want to see how the server works without an enterprise ETLA? Run in mock mode. Every tool call returns placeholder images from `picsum.photos` so you can exercise the full MCP flow end-to-end locally.
 
 ```bash
 git clone https://github.com/krishnapallapolu/adobe-firefly-mcp.git
 cd adobe-firefly-mcp
 npm install
 cp .env.example .env
-# Fill in FIREFLY_CLIENT_ID, FIREFLY_CLIENT_SECRET, MCP_BEARER_TOKEN
+# Open .env and set:
+#   FIREFLY_MOCK=true
+#   MCP_BEARER_TOKEN=<anything 32+ chars, e.g. the openssl command below>
 npm run dev
+```
+
+Or the one-liner:
+
+```bash
+npm run dev:mock
 ```
 
 Health check:
 
 ```bash
 curl http://localhost:6002/healthz
-# → {"ok":true,"svc":"firefly-mcp"}
+# → {"ok":true,"svc":"firefly-mcp","mock":true}
+```
+
+### Option B: Real Firefly credentials
+
+```bash
+npm install
+cp .env.example .env
+# Open .env and set:
+#   FIREFLY_MOCK=false  (or leave it unset)
+#   FIREFLY_CLIENT_ID=...
+#   FIREFLY_CLIENT_SECRET=...
+#   MCP_BEARER_TOKEN=...
+npm run dev
 ```
 
 ### Generate the bearer token
@@ -69,7 +94,7 @@ curl http://localhost:6002/healthz
 openssl rand -hex 32
 ```
 
-Put the output in `MCP_BEARER_TOKEN`. This is what MCP clients will present in the `Authorization: Bearer ...` header.
+Put the output in `MCP_BEARER_TOKEN`. This is what MCP clients will present in the `Authorization: Bearer ...` header. Only required for HTTP transport — stdio transport ignores it.
 
 ### Get Firefly credentials
 
@@ -83,7 +108,40 @@ Put the output in `MCP_BEARER_TOKEN`. This is what MCP clients will present in t
 
 ## Connecting to MCP clients
 
-### Claude Desktop / Cowork (remote connector)
+This project supports both MCP transports:
+
+- **Streamable HTTP** (remote) — required for Claude Cowork, claude.ai, and any cloud-based MCP client
+- **stdio** (local subprocess) — for Claude Desktop's `claude_desktop_config.json`
+
+### Claude Desktop — local via stdio (recommended for trying it out)
+
+```bash
+npm install
+npm run build
+```
+
+Then edit your `claude_desktop_config.json`:
+
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "adobe-firefly": {
+      "command": "node",
+      "args": ["/absolute/path/to/adobe-firefly-mcp/dist/index-stdio.js"],
+      "env": {
+        "FIREFLY_MOCK": "true"
+      }
+    }
+  }
+}
+```
+
+Restart Claude Desktop. The 9 Firefly tools will appear in the tool list. With `FIREFLY_MOCK=true` you can exercise all of them and get back placeholder images — no Adobe credentials needed. Replace with real `FIREFLY_CLIENT_ID` / `FIREFLY_CLIENT_SECRET` when you're ready to generate actual content.
+
+### Claude Cowork / claude.ai — remote connector
 
 Settings → Connectors → **Add custom connector**:
 
@@ -93,7 +151,7 @@ Settings → Connectors → **Add custom connector**:
 | URL | `https://your-host.example.com/mcp` |
 | Authorization header | `Bearer <your MCP_BEARER_TOKEN>` |
 
-Remote connectors require your server to be reachable from Anthropic's cloud infrastructure. You'll need to deploy somewhere publicly accessible (see [Deployment](#deployment) below). Local stdio transport is not currently supported by this project.
+Remote connectors require your server to be reachable from Anthropic's cloud infrastructure. See [Deployment](#deployment) below.
 
 ### Cursor
 
@@ -148,9 +206,10 @@ All configuration via environment variables. See `.env.example` for the full lis
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `FIREFLY_CLIENT_ID` | yes | — | From Adobe Developer Console |
-| `FIREFLY_CLIENT_SECRET` | yes | — | From Adobe Developer Console |
-| `MCP_BEARER_TOKEN` | yes | — | Shared secret between server and MCP client. Min 32 chars. |
+| `FIREFLY_MOCK` | no | `false` | If `true`, bypass Adobe entirely and return placeholder images. Ignores `FIREFLY_CLIENT_ID`/`SECRET`. |
+| `FIREFLY_CLIENT_ID` | conditional | — | From Adobe Developer Console. Required unless `FIREFLY_MOCK=true`. |
+| `FIREFLY_CLIENT_SECRET` | conditional | — | From Adobe Developer Console. Required unless `FIREFLY_MOCK=true`. |
+| `MCP_BEARER_TOKEN` | conditional | — | Required for HTTP transport only. Min 32 chars. Ignored in stdio mode. |
 | `PORT` | no | `6002` | HTTP listen port |
 | `HOST` | no | `0.0.0.0` | HTTP listen address |
 | `LOG_LEVEL` | no | `info` | Pino log level: trace/debug/info/warn/error/fatal |
@@ -164,7 +223,7 @@ All configuration via environment variables. See `.env.example` for the full lis
 - **Model versions.** The public OpenAPI spec enumerates `image3`, `image3_custom`, `image4_standard`, `image4_ultra`, `image4_custom`. Image Model 5 is mentioned in Adobe marketing but not yet in the public spec. The `modelVersion` parameter is typed as a loose string so new versions work as soon as Adobe enables them on your tenant — no code change needed.
 - **Token cache** is in-process. Fine for a single container. For horizontal scaling, move the IMS token cache to Redis with a distributed lock around refresh.
 - **Generative credits.** Every successful generation consumes credits from your enterprise quota. Monitor usage via the Adobe Admin Console.
-- **Streamable HTTP only.** This server doesn't implement stdio or SSE transport. SSE is being deprecated in the MCP ecosystem; stdio is only useful for Claude Desktop's local `claude_desktop_config.json` mechanism, which isn't available in Cowork or claude.ai anyway.
+- **Two transports supported.** Streamable HTTP for remote connectors (Cowork, claude.ai), stdio for local subprocess use (Claude Desktop `claude_desktop_config.json`). SSE transport is not implemented — it's being deprecated in the MCP ecosystem.
 
 ## Architecture
 

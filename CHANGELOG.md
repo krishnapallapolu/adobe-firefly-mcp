@@ -14,15 +14,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `get_job_status`
 - Adobe IMS OAuth2 server-to-server authentication with in-memory token
   caching and proactive refresh 5 minutes before expiry
-- Streamable HTTP transport via the official MCP TypeScript SDK
-- Bearer-token edge authentication with constant-time comparison
+- **Two transports**: Streamable HTTP (for remote connectors like Cowork /
+  claude.ai) and stdio (for Claude Desktop's local `claude_desktop_config.json`)
+- **Mock mode** (`FIREFLY_MOCK=true`) — returns placeholder images from
+  `picsum.photos` so you can exercise the full MCP flow without an Adobe
+  enterprise ETLA. Useful for local dev, demos, CI, and contributors.
+- `.env` file loading via Node 20.6+ `--env-file-if-exists` flag (no
+  `dotenv` dependency)
+- Bearer-token edge authentication with constant-time comparison (HTTP only)
 - Async job polling hidden from callers — configurable interval and timeout
 - Docker multi-stage build, non-root runtime, healthcheck
 - Docker Compose template with Traefik labels for TLS termination
-- Structured logging via Pino with automatic credential redaction
+- Structured logging via Pino with automatic credential redaction; logs
+  routed to stderr in stdio mode to protect the JSON-RPC stdout stream
 
 ### Known limitations
-- Streamable HTTP transport only (no stdio, no SSE)
 - In-memory token cache — does not scale horizontally without modification
 - No built-in retry on transient Firefly 5xx errors
-- No test coverage
+- No test coverage yet
