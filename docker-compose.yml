@@ -1,0 +1,48 @@
+# docker-compose.yml
+#
+# Example deployment template. Before running, replace the Host() rule below
+# with your own hostname, and make sure:
+#  1. You have a Traefik instance on the `traefik_public` external network
+#     (create with: `docker network create traefik_public`)
+#  2. Your Traefik is configured with a certresolver named `letsencrypt`
+#     (or adjust the label to match your certresolver)
+#  3. A DNS A/AAAA record points your hostname at the host running this stack
+#  4. Port 443 is reachable from the public internet (required by MCP clients
+#     that call from cloud infrastructure, e.g. Claude Cowork)
+
+services:
+  firefly-mcp:
+    build: .
+    image: firefly-mcp:latest
+    container_name: firefly-mcp
+    restart: unless-stopped
+    environment:
+      FIREFLY_CLIENT_ID: ${FIREFLY_CLIENT_ID}
+      FIREFLY_CLIENT_SECRET: ${FIREFLY_CLIENT_SECRET}
+      MCP_BEARER_TOKEN: ${MCP_BEARER_TOKEN}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      PORT: "6002"
+      HOST: "0.0.0.0"
+    networks:
+      - traefik_public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik_public"
+
+      # Router
+      - "traefik.http.routers.firefly-mcp.rule=Host(`firefly-mcp.your-domain.example.com`)"
+      - "traefik.http.routers.firefly-mcp.entrypoints=websecure"
+      - "traefik.http.routers.firefly-mcp.tls=true"
+      - "traefik.http.routers.firefly-mcp.tls.certresolver=letsencrypt"
+
+      # Service
+      - "traefik.http.services.firefly-mcp.loadbalancer.server.port=6002"
+
+      # Rate limit — defence in depth
+      - "traefik.http.middlewares.firefly-ratelimit.ratelimit.average=30"
+      - "traefik.http.middlewares.firefly-ratelimit.ratelimit.burst=10"
+      - "traefik.http.routers.firefly-mcp.middlewares=firefly-ratelimit"
+
+networks:
+  traefik_public:
+    external: true

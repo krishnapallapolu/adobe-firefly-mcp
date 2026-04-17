@@ -1,0 +1,61 @@
+{
+  "name": "adobe-firefly-mcp",
+  "version": "0.1.0",
+  "description": "Unofficial Model Context Protocol (MCP) server for the Adobe Firefly Services API. Image and video generation from any MCP client.",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "adobe-firefly-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "adobe",
+    "firefly",
+    "firefly-services",
+    "generative-ai",
+    "image-generation",
+    "claude",
+    "claude-desktop",
+    "cowork",
+    "cursor"
+  ],
+  "author": "Krishna Pallapolu",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/krishnapallapolu/adobe-firefly-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/krishnapallapolu/adobe-firefly-mcp/issues"
+  },
+  "homepage": "https://github.com/krishnapallapolu/adobe-firefly-mcp#readme",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "express": "^4.21.2",
+    "pino": "^9.5.0",
+    "pino-http": "^10.3.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
